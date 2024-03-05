@@ -153,3 +153,81 @@ def optuna_train(
     trial.set_user_attr("all_train_loss", train_loss_hist)
 
     return val_loss_min
+
+
+def train(
+        model: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        loss_func: nn.Module,
+        train_data: DataLoader, val_data: DataLoader,
+        cp_path: str = "checkpoints", cp_filename: str = "best.pt",
+        n_epochs: int = 100,
+):
+    """
+    Training routine without Optuna.
+    :param model: Pytorch model
+    :param optimizer: Pytorch optimizer
+    :param loss_func: Pytorch loss function
+    :param train_data: Training set DataLoader. Each batch should be a tuple (X, y).
+    :param val_data: Validation set DataLoader. Each batch should be a tuple (X, y).
+    :param cp_path: Directory to save checkpoints. Default: "checkpoints"
+    :param cp_filename: Filename of the best model checkpoint. Default: "best.pt"
+    :param n_epochs: Number of epochs to train. Default: 100
+    :return: Validation loss of the best model
+    """
+    if not os.path.exists(cp_path):
+        os.makedirs(cp_path, exist_ok=True)
+
+    device = best_torch_device()
+    print(f"Using device: {device}")
+
+    # Setup early stopping
+    early_stopping = EarlyStopping(
+        verbose=True, path=f"{cp_path}/{cp_filename}"
+    )
+
+    train_loss_hist = []
+    val_loss_hist = []
+    for epoch in range(n_epochs):
+        model.train()
+
+        train_loss = 0
+        with tqdm(train_data, unit="batch", leave=False) as t:
+            t.set_description(f"Epoch {epoch}")
+
+            # Train the model
+            for X, y in t:
+                X, y = X.to(device), y.to(device)
+                pred = model(X)
+                loss = loss_func(pred, y)
+                train_loss += loss.item()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                t.set_postfix(loss=f"{loss:.4f}")
+
+        train_loss /= len(train_data)
+        t.set_postfix(loss=f"{train_loss:.4f}")
+        train_loss_hist.append(train_loss)
+
+        # Evaluate model on the validation set
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for X, y in val_data:
+                X, y = X.to(device), y.to(device)
+                pred = model(X)
+                val_loss += loss_func(pred, y).item()
+        val_loss /= len(val_data)
+        val_loss_hist.append(val_loss)
+        print(f"[Epoch {epoch}] val_loss={val_loss:.6f}. ", end="")
+
+        # Early stopping
+        model.to("cpu")
+        early_stopping(val_loss, model)
+        model.to(device)
+        if early_stopping.early_stop:
+            print("Early stopping.")
+            break
+
+    return val_loss_hist, train_loss_hist
