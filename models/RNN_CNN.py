@@ -29,11 +29,11 @@ class RNNWithCNN(nn.Module):
         cnn_use_bn = trial.suggest_categorical("cnn_use_bn", [True, False])
         cnn_activation = trial.suggest_categorical("cnn_activation", ["ReLU", "ELU"])
         cnn_dropout = trial.suggest_float("cnn_dropout", 0.0, 0.5)
-        kernel_size = trial.suggest_int(f"cnn_kernel_size", 3, 10)
+        kernel_size = trial.suggest_int(f"cnn_kernel_size", 3, 20)
 
         cnn_layers = nn.ModuleList()
         for i in range(num_cnn_layers):
-            out_channels = trial.suggest_int(f"cnn_out_channels_{i}", 2, 256)
+            out_channels = trial.suggest_int(f"cnn_out_channels_{i}", 2, 200)
             padding = kernel_size // 2
             cnn_layers.append(
                 nn.LazyConv1d(
@@ -66,7 +66,7 @@ class RNNWithCNN(nn.Module):
         # Fully connected layers - 1
         self.use_fc1 = trial.suggest_categorical("use_fc1", [True, False])
         if self.use_fc1:
-            fc_out_size = trial.suggest_int("rnn_in_size", 64, 2048)
+            fc_out_size = trial.suggest_int("rnn_in_size", 64, 700)
             self.fc1 = nn.Sequential(
                 nn.Flatten(),
                 nn.LazyLinear(fc_out_size),
@@ -74,7 +74,7 @@ class RNNWithCNN(nn.Module):
             rnn_in_size = 1
 
         # RNN
-        num_rnn_layers = trial.suggest_int("num_rnn_layers", 1, 5)
+        num_rnn_layers = trial.suggest_int("num_rnn_layers", 1, 8)
         rnn_hidden_size = trial.suggest_int("rnn_hidden_size", 16, 512)
         rnn_dropout = trial.suggest_float("rnn_dropout", 0.0, 0.5)
         self.rnn = nn.LSTM(
@@ -91,7 +91,7 @@ class RNNWithCNN(nn.Module):
         fc_layers_2 = nn.ModuleList()
         fc_layers_2.append(nn.Flatten())
         for i in range(num_fc_layers):
-            out_features = trial.suggest_int(f"fc_out_features_1_{i}", 16, 2048)
+            out_features = trial.suggest_int(f"fc_out_features_1_{i}", 16, 1024)
             dropout = trial.suggest_float(f"fc_dropout_1_{i}", 0.0, 0.5)
             fc_layers_2.append(nn.LazyLinear(out_features))
             if fc_use_bn:

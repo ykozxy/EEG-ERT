@@ -115,7 +115,7 @@ def optuna_train(
 
     # Setup early stopping
     early_stopping = EarlyStopping(
-        verbose=verbose, path=f"{cp_path}/{trial.study.study_name}_{trial.number}.pt"
+        verbose=verbose, path=f"{cp_path}/{trial.study.study_name}_{trial.number}.pt", delta=1e-6
     )
 
     val_loss_min = np.Inf
@@ -186,9 +186,11 @@ def optuna_train(
         trial.report(val_acc_max, step=epoch)
         if trial.should_prune():
             trial.set_user_attr("all_train_loss", train_loss_hist)
+            trial.set_user_attr("all_train_acc", train_acc_hist)
             raise optuna.TrialPruned()
 
     trial.set_user_attr("all_train_loss", train_loss_hist)
+    trial.set_user_attr("all_train_acc", train_acc_hist)
 
     return val_acc_max
 
