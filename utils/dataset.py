@@ -28,6 +28,10 @@ class EEGDataset:
             self.X = self.X[idx]
             self.y = self.y[idx]
 
+        # Convert to float32
+        self.X = self.X.astype(np.float32)
+        self.y = self.y.astype(np.float32)
+
     def __len__(self):
         return self.X.shape[0]
 
