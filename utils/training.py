@@ -231,3 +231,44 @@ def train(
             break
 
     return val_loss_hist, train_loss_hist
+
+def tutorial_train(model, loader, val_loader, device, optimizer, cel_loss, num_epochs=10): 
+    train_acc_hist = []
+    val_acc_hist = []
+    for epoch_idx in tqdm(range(num_epochs)):
+        # Set model to train mode - useful for layers such as BatchNorm or Dropout whose behaviors change between train/eval
+        model.train()
+        train_count = 0
+        train_correct_count = 0
+        for batch_idx, (train_x, train_y) in enumerate(loader):
+            train_x = train_x.float().to(device)
+            train_y = train_y.long().to(device)
+            optimizer.zero_grad()
+            logits = model(train_x)
+            loss = cel_loss(logits, train_y)
+            loss.backward()
+            optimizer.step()
+
+            with torch.no_grad():
+                y_hat = torch.argmax(logits, dim=-1)
+                train_correct_count += torch.sum(y_hat == train_y, axis=-1)
+                train_count += train_x.size(0)
+
+        train_acc = train_correct_count / train_count
+        train_acc_hist.append(train_acc)
+
+        model.eval()
+        val_count = 0
+        val_correct_count = 0
+        with torch.no_grad():
+            for idx, (val_x, val_y) in enumerate(val_loader):
+                val_x = val_x.float().to(device)
+                val_y = val_y.long().to(device)
+                logits = model(val_x).detach()
+                y_hat = torch.argmax(logits, dim=-1)
+                val_correct_count += torch.sum(y_hat == val_y, axis=-1)
+                val_count += val_x.size(0)
+        val_acc = val_correct_count / val_count
+        val_acc_hist.append(val_acc)
+
+        print('Train acc: {:.3f}, Val acc: {:.3f}'.format(train_acc, val_acc))
