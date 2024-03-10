@@ -8,11 +8,11 @@ class RNNWithCNN(nn.Module):
     Combination of RNN and CNN.
 
     Architecture
-     - Input: (N, D, T), D (num of features), T (num of time steps)
+    - Input: (N, D, T), D (num of features), T (num of time steps)
     - 1D Convolutions along temporal dimension
         - Conv - BN - ReLU - MaxPool
-     - RNN (LSTM)
-     - Fully connected layers
+    - RNN (LSTM)
+    - Fully connected layers
     """
 
     def __init__(
@@ -29,10 +29,10 @@ class RNNWithCNN(nn.Module):
         cnn_use_bn = trial.suggest_categorical("cnn_use_bn", [True, False])
         cnn_activation = trial.suggest_categorical("cnn_activation", ["ReLU", "ELU"])
         cnn_dropout = trial.suggest_float("cnn_dropout", 0.0, 0.5)
-        kernel_size = trial.suggest_int(f"cnn_kernel_size", 3, 20)
 
         cnn_layers = nn.ModuleList()
         for i in range(num_cnn_layers):
+            kernel_size = trial.suggest_int(f"cnn_kernel_size_{i}", 3, 20)
             out_channels = trial.suggest_int(f"cnn_out_channels_{i}", 2, 200)
             padding = kernel_size // 2
             cnn_layers.append(
@@ -43,16 +43,15 @@ class RNNWithCNN(nn.Module):
                 )
             )
 
+            if cnn_use_bn:
+                cnn_layers.append(nn.LazyBatchNorm1d())
+
             if cnn_activation == "ReLU":
                 cnn_layers.append(nn.ReLU())
             else:
                 cnn_layers.append(nn.ELU())
 
-            if cnn_use_bn:
-                cnn_layers.append(nn.LazyBatchNorm1d())
-
             cnn_layers.append(nn.MaxPool1d(kernel_size=2))
-
             cnn_layers.append(nn.Dropout(cnn_dropout))
 
         self.cnn = nn.Sequential(*cnn_layers)
@@ -74,7 +73,7 @@ class RNNWithCNN(nn.Module):
             rnn_in_size = 1
 
         # RNN
-        num_rnn_layers = trial.suggest_int("num_rnn_layers", 1, 8)
+        num_rnn_layers = trial.suggest_int("num_rnn_layers", 1, 10)
         rnn_hidden_size = trial.suggest_int("rnn_hidden_size", 16, 512)
         rnn_dropout = trial.suggest_float("rnn_dropout", 0.0, 0.5)
         self.rnn = nn.LSTM(
@@ -87,12 +86,12 @@ class RNNWithCNN(nn.Module):
 
         # Fully connected layers - 2
         num_fc_layers = trial.suggest_int("num_fc_layers_2", 0, 3)
-        fc_use_bn = trial.suggest_categorical("fc_use_bn_1", [True, False])
+        fc_use_bn = trial.suggest_categorical("fc_use_bn_2", [True, False])
         fc_layers_2 = nn.ModuleList()
         fc_layers_2.append(nn.Flatten())
         for i in range(num_fc_layers):
-            out_features = trial.suggest_int(f"fc_out_features_1_{i}", 16, 1024)
-            dropout = trial.suggest_float(f"fc_dropout_1_{i}", 0.0, 0.5)
+            out_features = trial.suggest_int(f"fc_out_features_2_{i}", 16, 1024)
+            dropout = trial.suggest_float(f"fc_dropout_2_{i}", 0.0, 0.5)
             fc_layers_2.append(nn.LazyLinear(out_features))
             if fc_use_bn:
                 fc_layers_2.append(nn.BatchNorm1d(out_features))
