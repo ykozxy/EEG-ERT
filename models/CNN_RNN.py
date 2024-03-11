@@ -1,7 +1,7 @@
+import optuna
 import torch
 from optuna import Trial
 from torch import nn
-
 
 class RNNWithCNN(nn.Module):
     """
