@@ -75,10 +75,10 @@ class ViTforEEG(nn.Module):
         self.cls_token = nn.Parameter(torch.rand(1, self.hidden_dims))
 
         # Positional Embedding
-        self.pos_emb = nn.Parameter(torch.tensor(vectorized_positional_embedding(self.n_patches + 1, self.hidden_dims)))
+        self.pos_emb = nn.Parameter(vectorized_positional_embedding(self.n_patches + 1, self.hidden_dims).clone().detach())
         self.pos_emb.requires_grad = False
 
-        encoder_layer = TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, dropout=dropout)
+        encoder_layer = TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, dropout=dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layer, num_layers=num_layers)
 
         self.mlp = nn.Sequential(
