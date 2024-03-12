@@ -150,7 +150,7 @@ def optuna_train(
                 loss.backward()
                 optimizer.step()
                 t.set_postfix(loss=f"{loss:.4f}")
-            
+
             if scheduler is not None:
                 scheduler.step()
 
@@ -217,9 +217,13 @@ def train(
     loss_func: nn.Module,
     train_data: DataLoader,
     val_data: DataLoader,
+    early_stopping_patience: int = 13,
+    scheduler=None,
     cp_path: str = "checkpoints",
     cp_filename: str = "best.pt",
     n_epochs: int = 100,
+    verbose: bool = True,
+    show_progress_bar: bool = True,
 ):
     """
     Training routine without Optuna.
@@ -228,9 +232,13 @@ def train(
     :param loss_func: Pytorch loss function
     :param train_data: Training set DataLoader. Each batch should be a tuple (X, y).
     :param val_data: Validation set DataLoader. Each batch should be a tuple (X, y).
+    :param early_stopping_patience: Number of epochs to wait before early stopping. Set to 0 to disable. Default: 13
+    :param scheduler: Pytorch learning rate scheduler. Default: None
     :param cp_path: Directory to save checkpoints. Default: "checkpoints"
     :param cp_filename: Filename of the best model checkpoint. Default: "best.pt"
     :param n_epochs: Number of epochs to train. Default: 100
+    :param verbose: Print verbose logs. Default: True
+    :param show_progress_bar: Show progress bar. Default: True
     :return: Validation loss of the best model
     """
     if not os.path.exists(cp_path):
@@ -240,15 +248,24 @@ def train(
     print(f"Using device: {device}")
 
     # Setup early stopping
-    early_stopping = EarlyStopping(verbose=True, path=f"{cp_path}/{cp_filename}")
+    if early_stopping_patience > 0:
+        early_stopping = EarlyStopping(
+            verbose=verbose,
+            path=f"{cp_path}/{cp_filename}",
+            delta=1e-6,
+            patience=early_stopping_patience,
+        )
 
     train_loss_hist = []
+    train_acc_hist = []
     val_loss_hist = []
+    val_acc_hist = []
     for epoch in range(n_epochs):
         model.train()
 
         train_loss = 0
-        with tqdm(train_data, unit="batch", leave=False) as t:
+        train_acc = 0
+        with tqdm(train_data, unit="batch", leave=True, disable=not show_progress_bar) as t:
             t.set_description(f"Epoch {epoch}")
 
             # Train the model
@@ -257,33 +274,49 @@ def train(
                 pred = model(X)
                 loss = loss_func(pred, y)
                 train_loss += loss.item()
+                train_acc += (pred.argmax(dim=1) == y.argmax(dim=1)).sum().item()
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 t.set_postfix(loss=f"{loss:.4f}")
 
-        train_loss /= len(train_data.dataset)
-        t.set_postfix(loss=f"{train_loss:.4f}")
-        train_loss_hist.append(train_loss)
+            train_loss /= len(train_data.dataset)
+            train_loss_hist.append(train_loss)
+            train_acc /= len(train_data.dataset)
+            train_acc_hist.append(train_acc)
 
-        # Evaluate model on the validation set
-        model.eval()
-        val_loss = 0
-        with torch.no_grad():
-            for X, y in val_data:
-                X, y = X.to(device), y.to(device)
-                pred = model(X)
-                val_loss += loss_func(pred, y).item()
-        val_loss /= len(val_data.dataset)
-        val_loss_hist.append(val_loss)
-        print(f"[Epoch {epoch}] val_loss={val_loss:.6f}. ", end="")
+            if scheduler is not None:
+                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    scheduler.step(train_loss)
+                else:
+                    scheduler.step()
+
+            # Evaluate validation loss and accuracy
+            model.eval()
+            val_loss = 0
+            val_acc = 0
+            with torch.no_grad():
+                for X, y in val_data:
+                    X, y = X.to(device), y.to(device)
+                    pred = model(X)
+                    val_loss += loss_func(pred, y).item()
+                    val_acc += (pred.argmax(dim=1) == y.argmax(dim=1)).sum().item()
+            val_loss /= len(val_data.dataset)
+            val_acc /= len(val_data.dataset)
+            val_loss_hist.append(val_loss)
+            val_acc_hist.append(val_acc)
+
+        print(
+            f"[Epoch {epoch}] val_acc={val_acc:.6f} train_acc={train_acc:.6f} val_loss={val_loss:.6f} train_loss={train_loss:.6f}"
+        )
 
         # Early stopping
-        model.to("cpu")
-        early_stopping(val_loss, model)
-        model.to(device)
-        if early_stopping.early_stop:
-            print("Early stopping.")
-            break
+        if early_stopping_patience > 0:
+            model.to("cpu")  # Save model on CPU to avoid pytorch bugs
+            early_stopping(val_loss, model)
+            model.to(device)
+            if early_stopping.early_stop:
+                print("Early stopping.")
+                break
 
-    return val_loss_hist, train_loss_hist
+    return train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist

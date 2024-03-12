@@ -1,7 +1,7 @@
+import optuna
 import torch
 from optuna import Trial
 from torch import nn
-
 
 class RNNWithCNN(nn.Module):
     """
@@ -50,9 +50,6 @@ class RNNWithCNN(nn.Module):
                 cnn_layers.append(nn.ReLU())
             else:
                 cnn_layers.append(nn.ELU())
-
-            if cnn_use_bn:
-                cnn_layers.append(nn.LazyBatchNorm1d())
 
             cnn_layers.append(nn.MaxPool1d(kernel_size=2))
             cnn_layers.append(nn.Dropout(cnn_dropout))
