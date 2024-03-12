@@ -23,6 +23,7 @@ def prepare_frequency_data():
     person_train = person_train_valid[:1777]
 
     X_train_aug = [X_train]
+    # X_train_aug = []
     concat_times = len(X_train_aug)
 
     # print("filtering data...")
@@ -31,10 +32,10 @@ def prepare_frequency_data():
     # X_test_filtered_30_100 = [mne.filter.filter_data(trial, sfreq, 30, 100, verbose=False) for trial in X_test]
     # X_test_filtered_0_30 = [mne.filter.filter_data(trial, sfreq, 0, 30, verbose=False) for trial in X_test]
 
-    surrogate_times = 4
+    surrogate_times = 1
     for i in range(surrogate_times):
         print(f"generating ft surrogate ({i})...")
-        ftsurrogate = Augmentations.FTSurrogate(probability=0.5, channel_indep=False)
+        ftsurrogate = Augmentations.FTSurrogate(probability=0.5, channel_indep=False, phase_noise_magnitude=0.9)
         sr = np.array([ftsurrogate(trial) for trial in X_train])
         X_train_aug.append(sr)
         concat_times += 1
