@@ -1,10 +1,17 @@
 import numpy as np
+import torch
 
 
-class EEGDataset:
-    """ PyTorch Dataset for EEG data """
+class EEGDataset(torch.utils.data.Dataset):
+    """PyTorch Dataset for EEG data"""
 
-    def __init__(self, X: np.ndarray, y: np.ndarray, shuffle: bool = True, label_smoothing: bool = True):
+    def __init__(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        shuffle: bool = True,
+        label_smoothing: bool = True,
+    ):
         self.X = X
         self.y = y
 
@@ -39,10 +46,10 @@ class EEGDataset:
         return self.X[idx], self.y[idx]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Testing
-    X_file = '../data/X_train_valid.npy'
-    y_file = '../data/y_train_valid.npy'
+    X_file = "../data/X_train_valid.npy"
+    y_file = "../data/y_train_valid.npy"
     dataset = EEGDataset(np.load(X_file), np.load(y_file))
     print(len(dataset))
     print(dataset[0][0].shape)
