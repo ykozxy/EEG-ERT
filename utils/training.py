@@ -265,7 +265,7 @@ def train(
 
         train_loss = 0
         train_acc = 0
-        with tqdm(train_data, unit="batch", leave=True, disable=not show_progress_bar) as t:
+        with tqdm(train_data, unit="batch", disable=not show_progress_bar) as t:
             t.set_description(f"Epoch {epoch}")
 
             # Train the model
@@ -306,9 +306,10 @@ def train(
             val_loss_hist.append(val_loss)
             val_acc_hist.append(val_acc)
 
-        print(
-            f"[Epoch {epoch}] val_acc={val_acc:.6f} train_acc={train_acc:.6f} val_loss={val_loss:.6f} train_loss={train_loss:.6f}"
-        )
+        if verbose:
+            print(
+                f"[Epoch {epoch}] val_acc={val_acc:.6f} train_acc={train_acc:.6f} val_loss={val_loss:.6f} train_loss={train_loss:.6f}"
+            )
 
         # Early stopping
         if early_stopping_patience > 0:
@@ -316,7 +317,8 @@ def train(
             early_stopping(val_loss, model)
             model.to(device)
             if early_stopping.early_stop:
-                print("Early stopping.")
+                if verbose:
+                    print("Early stopping.")
                 break
 
     return train_loss_hist, train_acc_hist, val_loss_hist, val_acc_hist
