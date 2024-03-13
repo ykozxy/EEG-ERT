@@ -58,7 +58,7 @@ def vectorized_positional_embedding(num_tokens, token_dim):
 
 
 class ViTforEEG(nn.Module):
-    def __init__(self, input_dim=(22, 1000), out_dim=4, n_patches=1000, hidden_dims=64, num_heads=8, ff_dim=64, dropout=0.3, num_layers=2, device='mps'):
+    def __init__(self, input_dim=(22, 1000), out_dim=4, n_patches=500, hidden_dims=64, num_heads=8, ff_dim=64, dropout=0.5, num_layers=2, device='mps'):
         super(ViTforEEG, self).__init__()
 
         self.input_dim = input_dim
