@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from prepare_frequency_data import prepare_frequency_data
 from utils.dataset import EEGDataset
 from braindecode.augmentation import AugmentedDataLoader
-from braindecode.augmentation import FTSurrogate
+from braindecode.augmentation import FTSurrogate, SmoothTimeMask
 
 
 def get_raw_dataloader(label_smoothing: bool = True, batch_size: int = 64):
@@ -84,6 +84,7 @@ def get_frequency_dataloader(label_smoothing: bool = True, batch_size: int = 64)
     valid_set = EEGDataset(X_valid_data, y_valid_data, label_smoothing=False)
     test_set = EEGDataset(X_test_data, y_test_data, label_smoothing=False)
     ft_sr = FTSurrogate(probability=0.5, phase_noise_magnitude=0.9, channel_indep=False)
+    stm = SmoothTimeMask(probability=0.5)
 
     return (
         AugmentedDataLoader(train_set, transforms=[ft_sr], batch_size=batch_size, shuffle=True),
