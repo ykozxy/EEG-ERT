@@ -103,3 +103,89 @@ class ViTforEEG(nn.Module):
         out = out[:, 0]
 
         return self.mlp(out)
+    
+
+class ConvViTforEEG(nn.Module):
+    def __init__(self, input_dim=(22, 1000), out_dim=4, n_patches=500, hidden_dims=64, num_heads=8, ff_dim=64, dropout=0.5, num_layers=2, device='mps'):
+        super(ConvViTforEEG, self).__init__()
+
+        self.input_dim = input_dim
+        self.n_patches = n_patches
+        self.hidden_dims = hidden_dims
+        self.device = device
+
+        filter_num1 = 40
+        filter_num2 = 80
+        conv_out_dim = (40, 250)
+
+        # self.conv = nn.Sequential(
+        #     nn.Conv2d(1, filter_num1, kernel_size=(1, 64), padding=(0, 32)),
+        #     nn.BatchNorm2d(filter_num1),
+        #     nn.Conv2d(filter_num1, conv_out_dim[0], kernel_size=(22, 1), groups=10),
+        #     nn.BatchNorm2d(conv_out_dim[0]),
+        #     nn.ELU(),
+        #     nn.AvgPool2d(kernel_size=(1, 4)),
+        #     nn.Dropout(p=0.3)
+        # )
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, filter_num1, kernel_size=(1, 32), padding=(0, 16)),
+            nn.BatchNorm2d(filter_num1),
+            nn.ELU(),
+            nn.Conv2d(filter_num1, filter_num2, kernel_size=(1, 4), padding=(0, 2)),
+            nn.BatchNorm2d(filter_num2),
+            nn.ELU(),
+            nn.Conv2d(filter_num2, conv_out_dim[0], kernel_size=(22, 1), groups=10),
+            nn.BatchNorm2d(conv_out_dim[0]),
+            nn.ELU(),
+            nn.AvgPool2d(kernel_size=(1, 4)),
+            nn.Dropout(p=0.3)
+        )
+
+        self.patch_size = conv_out_dim[0] * conv_out_dim[1] // n_patches
+
+        # Linear Embedding
+        self.lin_emb = nn.Linear(self.patch_size, self.hidden_dims)
+
+        # Classification Token (learnable)
+        self.cls_token = nn.Parameter(torch.rand(1, self.hidden_dims))
+
+        # Positional Embedding
+        self.pos_emb = nn.Parameter(vectorized_positional_embedding(self.n_patches + 1, self.hidden_dims).clone().detach())
+        self.pos_emb.requires_grad = False
+
+        encoder_layer = TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, dropout=dropout, batch_first=True)
+        self.transformer_encoder = TransformerEncoder(encoder_layer, num_layers=num_layers)
+
+        self.mlp = nn.Sequential(
+            nn.Linear(self.hidden_dims, out_dim),
+            nn.Softmax(dim=-1)
+        )
+
+    
+    def forward(self, data):
+        N, C, T = data.shape
+
+        data = data.unsqueeze(3).to(self.device)
+        data = data.permute(0, 3, 1, 2)
+        data = self.conv(data)
+        data = data.squeeze(2)
+        print(data.shape)
+
+        patches = vectorized_patchify(data, self.n_patches)
+        tokens = self.lin_emb(patches.to(self.device))
+
+        # Add Tokens to Token Stack
+        tokens = torch.cat((self.cls_token.expand(N, 1, -1), tokens), dim=1)
+
+        # Add Positional Embedding
+        out = tokens + self.pos_emb.repeat(N, 1, 1)
+
+        out = self.transformer_encoder(out)
+
+        out = out[:, 0]
+
+        return self.mlp(out)
+    
+
+
