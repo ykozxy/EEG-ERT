@@ -1,0 +1,9 @@
+braindecode==0.8.1
+matplotlib==3.8.0
+numpy==1.25.2
+optuna==3.5.0
+retry==0.9.2
+torch==2.2.1
+torch-summary==1.4.5
+torchinfo==1.8.0
+tqdm==4.66.1
