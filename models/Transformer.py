@@ -125,7 +125,30 @@ class ViTforEEG(nn.Module):
     
 
 class ConvViTforEEG(nn.Module):
+    """
+    CNN + Vision Transformer tailored for our EEG data.
+
+    Architecture
+    - Input: (N, C, T), C (num of channels), T (num of time steps)
+    - (Conv(T) - BN - ELU) - (Conv(C) - BN - ELU) - AvgPool
+    - Patched along T axis (total of input_dim[1]/2 patches)
+        - Linear - Positional Embedding - Transformer Encoder x N - Linear
+    """
+
     def __init__(self, input_dim=(22, 1000), out_dim=4, hidden_dims=64, num_heads=8, ff_dim=64, dropout=0.5, num_layers=2, device='mps'):
+        """
+        Initializes the ConvViTforEEG model with specified configurations.
+
+        Parameters:
+        - input_dim (tuple): Dimensions of the input data. (number of EEG channels (C), num time steps (T)). Default is (22, 1000).
+        - out_dim (int): Number of output classes. Default is 4.        - hidden_dims (int): Dimension of the hidden layers in the Transformer Encoder. Default is 64.
+        - num_heads (int): Number of attention heads in the Transformer Encoder. Default is 8.
+        - ff_dim (int): Dimension of the feedforward network within the Transformer Encoder. Default is 64.
+        - dropout (float): Dropout rate in the Transformer Encoder. Default is 0.5.
+        - num_layers (int): Number of Transformer Encoder layers. Default is 2.
+        - device (str): Computing device for model execution. Default is 'mps'.
+        """
+
         super(ConvViTforEEG, self).__init__()
 
         self.input_dim = input_dim
