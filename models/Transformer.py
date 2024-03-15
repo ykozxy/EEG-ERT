@@ -114,8 +114,7 @@ class ConvViTforEEG(nn.Module):
         self.hidden_dims = hidden_dims
         self.device = device
 
-        filter_num1 = 40
-        filter_num2 = 80
+        filter_num1 = 20
         conv_out_dim = (40, 250)
 
         # self.conv = nn.Sequential(
@@ -129,20 +128,27 @@ class ConvViTforEEG(nn.Module):
         # )
 
         self.conv = nn.Sequential(
-            nn.Conv2d(1, filter_num1, kernel_size=(1, 32), padding=(0, 16)),
+            nn.Conv2d(1, filter_num1, kernel_size=(1, 64), padding=(0, 32)),
             nn.BatchNorm2d(filter_num1),
             nn.ELU(),
-            nn.Conv2d(filter_num1, filter_num2, kernel_size=(1, 4), padding=(0, 2)),
-            nn.BatchNorm2d(filter_num2),
-            nn.ELU(),
-            nn.Conv2d(filter_num2, conv_out_dim[0], kernel_size=(22, 1), groups=10),
+            nn.Conv2d(filter_num1, conv_out_dim[0], kernel_size=(22, 1), groups=10),
             nn.BatchNorm2d(conv_out_dim[0]),
             nn.ELU(),
             nn.AvgPool2d(kernel_size=(1, 4)),
             nn.Dropout(p=0.3)
         )
 
-        self.patch_size = conv_out_dim[0] * conv_out_dim[1] // n_patches
+        # self.conv_resize = nn.LazyConv1d(conv_out_dim[1], kernel_size=1) 
+
+        # self.patch_size = conv_out_dim[0] * conv_out_dim[1] // n_patches
+
+        t = torch.rand(2, 1, *input_dim)
+        t = self.conv(t)
+
+        self.n_patches = (t.shape[3] + 1) // 2
+        # print(t.shape)
+        # print(self.n_patches)
+        self.patch_size = conv_out_dim[0] * 2
 
         # Linear Embedding
         self.lin_emb = nn.Linear(self.patch_size, self.hidden_dims)
@@ -166,11 +172,20 @@ class ConvViTforEEG(nn.Module):
     def forward(self, data):
         N, C, T = data.shape
 
-        data = data.unsqueeze(3).to(self.device)
-        data = data.permute(0, 3, 1, 2)
+        data = data.unsqueeze(1).to(self.device)
         data = self.conv(data)
+        if data.shape[3] % 2 == 1:
+            data = nn.functional.pad(data, (0, 1), "constant", 0)
+        # print(data.shape)
         data = data.squeeze(2)
-        print(data.shape)
+
+        # print(data.shape)
+        # data = data.transpose(1, 2)
+        # data = self.conv_resize(data)
+        # data = data.transpose(1, 2)
+        # print(data.shape)
+
+        # self.n_patches = data.shape[2]//2
 
         patches = vectorized_patchify(data, self.n_patches)
         tokens = self.lin_emb(patches.to(self.device))
