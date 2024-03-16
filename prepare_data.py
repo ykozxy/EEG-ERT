@@ -1,7 +1,6 @@
 import numpy as np
 from torch.utils.data import DataLoader
 
-from prepare_frequency_data import prepare_frequency_data
 from utils.dataset import EEGDataset
 from braindecode.augmentation import AugmentedDataLoader
 from braindecode.augmentation import FTSurrogate, SmoothTimeMask

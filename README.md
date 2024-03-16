@@ -1,6 +1,6 @@
 # ECE C147 Final Project
 
-Muhan Zhang | Yubo Zhang | Yuxuan Qi | Xuyang Zhou
+Muhan Zhang | Xuyang Zhou | Yubo Zhang | Yuxuan Qi
 
 ## Directory Structure
 
@@ -13,10 +13,9 @@ The training and testing routines of all models are in their respective jupyter 
 - resnet.ipynb: ResNet
 - transformer.ipynb: Pure Transformer. This is not included in our final models, because we developed the visual
   transformer model based on this.
+- RNN.ipynb: RNN. This is also an intermediate model that we developed and not included in our final models.
 
 The trained models are saved in the `models` directory.
-
-Under the root directory, `prepare_data.py` and `prepare_frequency_data.py` are used to prepare the data for the models.
 
 ## How to Run
 
