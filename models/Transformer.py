@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
 def patchify(data, n_patches):
@@ -95,9 +94,9 @@ class ViTforEEG(nn.Module):
         self.pos_emb.requires_grad = False
 
         # Transformer Encoder
-        encoder_layer = TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, 
+        encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, 
                                                 dropout=dropout, batch_first=True)
-        self.transformer_encoder = TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
         # MLP
         self.mlp = nn.Sequential(
@@ -187,8 +186,8 @@ class ConvViTforEEG(nn.Module):
         self.pos_emb.requires_grad = False
 
         # Transformer Encoder
-        encoder_layer = TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, dropout=dropout, batch_first=True)
-        self.transformer_encoder = TransformerEncoder(encoder_layer, num_layers=num_layers)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_dims, nhead=num_heads, dim_feedforward=ff_dim, dropout=dropout, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
         # MLP
         self.mlp = nn.Sequential(
